@@ -46,15 +46,12 @@ The dataset contains **10,000 verified transaction records** spanning **January 
 ```text
 Amazon India Dashboard/
 │
-├── app.py                      # Main Streamlit dashboard application
-├── data_loader.py              # Data loading, cleaning, feature engineering & caching
-├── utils.py                    # Currency formatting, KPI calculations & Plotly chart theming
-├── Amazon Sales Data India.xlsx# Primary source dataset (10,000 records)
-├── requirements.txt            # Python dependencies
-└── README.md                   # Academic project documentation & viva guide
-```
-
----
+├── app.py              # Main Streamlit dashboard
+├── data_loader.py     # Data loading and preprocessing
+├── utils.py           # KPI calculations and chart utilities
+├── requirements.txt   # Required Python libraries
+├── .gitignore         # Files excluded from GitHub
+└── README.md          # Project documentation
 
 ## 🛠️ 4. Technology Stack & Justification
 
@@ -69,14 +66,38 @@ Amazon India Dashboard/
 
 ## 🚀 5. Installation & Execution Guide
 
-### Prerequisites:
-Ensure you have **Python 3.10+** installed on your system.
+### Prerequisites
+- Python 3.10 or above
+- pip package manager
 
-### Step 1: Open Terminal / Command Prompt
-Navigate to the project root directory:
-```bash
-cd "c:\Users\Aditi Upadhyay\OneDrive\Desktop\Amazon India Dashboard"
-```
+### Step 1: Clone the Repository
+
+git clone https://github.com/Swasan-vortex/amazon-india-sales-dashboard.git
+
+### Step 2: Open the Project Folder
+
+cd amazon-india-sales-dashboard
+
+### Step 3: Add the Dataset
+
+The Excel dataset is not included in this public repository.
+
+Place the authorized dataset file named
+`Amazon Sales Data India.xlsx` in the project root folder.
+
+### Step 4: Install Dependencies
+
+pip install -r requirements.txt
+
+### Step 5: Run the Dashboard
+
+streamlit run app.py
+
+### Step 6: Open in Browser
+
+Open the local URL provided by Streamlit,
+usually http://localhost:8501
+
 
 ### Step 2: Install Dependencies
 Install all required libraries using `pip`:
