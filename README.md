@@ -46,67 +46,46 @@ The dataset contains **10,000 verified transaction records** spanning **January 
 ```text
 Amazon India Dashboard/
 │
-├── app.py              # Main Streamlit dashboard
-├── data_loader.py     # Data loading and preprocessing
-├── utils.py           # KPI calculations and chart utilities
-├── requirements.txt   # Required Python libraries
-├── .gitignore         # Files excluded from GitHub
-└── README.md          # Project documentation
-
-## 🛠️ 4. Technology Stack & Justification
-
-- **Python 3:** Highly flexible, readable language standard for data science.
-- **Streamlit:** Python-native framework allowing rapid development of interactive web dashboards without HTML/CSS/JS boilerplate.
-- **Pandas:** Vectorized data manipulation, aggregations, filtering, and cross-tabulations.
-- **NumPy:** Mathematical calculations for profit margins and conditional arrays.
-- **Plotly Express & Graph Objects:** Interactive, responsive, publication-quality visualizations with native hover tooltips and zoom capabilities.
-- **OpenPyXL:** Engine for reading and parsing `.xlsx` Microsoft Excel files.
+├── app.py                      # Main Streamlit dashboard application
+├── data_loader.py              # Data loading, cleaning, feature engineering & caching
+├── utils.py                    # Currency formatting, KPI calculations & Plotly chart theming
+├── Amazon Sales Data India.xlsx# Primary source dataset (10,000 records - gitignored)
+├── requirements.txt            # Pinned, reproducible Python dependencies
+├── .python-version             # Specified Python runtime version (3.11.9)
+├── .gitignore                  # Excluded sensitive and generated files
+└── README.md                   # Academic project documentation & deployment guide
+```
 
 ---
 
-## 🚀 5. Installation & Execution Guide
+## 🛠️ 4. Technology Stack & Justification
 
-### Prerequisites
-- Python 3.10 or above
+- **Python 3.11:** Highly stable, mature runtime standard for data science and cloud hosting platforms.
+- **Streamlit (1.66.1):** Python-native framework allowing rapid development of interactive web dashboards with state management and native UI widgets.
+- **Pandas (2.3.3):** Vectorized data manipulation, aggregations, filtering, and cross-tabulations.
+- **NumPy (2.3.5):** Mathematical calculations for profit margins and conditional arrays.
+- **Plotly (7.1.0):** Interactive, responsive data visualizations with hover tooltips and responsive layouts.
+- **OpenPyXL (3.1.5):** Reliable engine for reading and parsing `.xlsx` Microsoft Excel files.
+
+---
+
+## 🚀 5. Local Setup & Execution Guide
+
+### Prerequisites:
+- Python 3.10 or 3.11 installed
 - pip package manager
 
-### Step 1: Clone the Repository
+### Step 1: Open Terminal & Navigate to Project Directory
+```bash
+cd "Amazon India Dashboard"
+```
 
-git clone https://github.com/Swasan-vortex/amazon-india-sales-dashboard.git
-
-### Step 2: Open the Project Folder
-
-cd amazon-india-sales-dashboard
-
-### Step 3: Add the Dataset
-
-The Excel dataset is not included in this public repository.
-
-Place the authorized dataset file named
-`Amazon Sales Data India.xlsx` in the project root folder.
-
-### Step 4: Install Dependencies
-
-pip install -r requirements.txt
-
-### Step 5: Run the Dashboard
-
-streamlit run app.py
-
-### Step 6: Open in Browser
-
-Open the local URL provided by Streamlit,
-usually http://localhost:8501
-
-
-### Step 2: Install Dependencies
-Install all required libraries using `pip`:
+### Step 2: Install Pinned Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
 ### Step 3: Run the Streamlit Dashboard
-Launch the dashboard locally:
 ```bash
 streamlit run app.py
 ```
@@ -123,7 +102,39 @@ http://localhost:8501
 
 ---
 
-## 💡 6. Key Business Insights & Analytical Findings
+## 🌐 6. Deployment Guide & Architecture Evaluation
+
+### Platform Comparison: Vercel vs. Streamlit Community Cloud
+
+| Feature / Criteria | Vercel | Streamlit Community Cloud (Recommended) |
+| :--- | :--- | :--- |
+| **Architecture** | Serverless Functions (stateless HTTP) | Stateful Python Server with persistent WebSockets |
+| **Session State & Reactivity** | Breaks across widget interactions | Built-in native support for reactive UI |
+| **Local File Handling** | Ephemeral, read-only filesystem | Persistent container runtime during session |
+| **WebSocket Support** | Restricted / requires external brokers | Native bi-directional WebSocket support |
+| **Deployment Complexity** | Requires complex WSGI/serverless adapters | 1-Click direct deployment from GitHub |
+| **Cost** | Free tier (serverless execution limits) | 100% Free for public GitHub repositories |
+
+> **Recommendation:** **Streamlit Community Cloud** (or alternatively Render / Railway / Hugging Face Spaces) is strongly recommended over Vercel for this project because Streamlit relies fundamentally on continuous WebSocket connections.
+
+### Dataset Storage for Public Deployment
+
+Because `Amazon Sales Data India.xlsx` is proprietary and excluded from GitHub (`.gitignore`), the application supports 3 flexible loading methods:
+
+1. **Local Development (Automatic):**
+   The application automatically detects and loads `Amazon Sales Data India.xlsx` if it exists in the project root.
+2. **Interactive UI Upload Fallback:**
+   If deployed without the Excel file, the application displays a friendly upload widget allowing reviewers or evaluators to drop in `Amazon Sales Data India.xlsx` to run the dashboard immediately.
+3. **Remote Cloud Storage via Streamlit Secrets (Automated Production):**
+   Store the Excel file in private cloud storage (e.g., AWS S3, Google Cloud Storage, or private link) and configure the secret in Streamlit Cloud **App Settings > Secrets**:
+   ```toml
+   DATASET_URL = "https://your-private-storage.com/Amazon%20Sales%20Data%20India.xlsx"
+   ```
+   The app will automatically stream and cache the dataset on launch.
+
+---
+
+## 💡 7. Key Business Insights & Analytical Findings
 
 1. **Category Revenue Asymmetry:**
    - *Electronics & Mobiles* generates **79.3%** of total business revenue (₹12.36 Cr) due to high unit selling prices (₹10,000 – ₹35,000), even though it accounts for only ~30% of total order volume.
@@ -145,9 +156,7 @@ http://localhost:8501
 
 ---
 
-## 🎓 7. Academic Viva & Defense Questions Guide
-
-Here are standard questions often asked by internal and external academic project examiners:
+## 🎓 8. Academic Viva & Defense Questions Guide
 
 - **Q1: Why did you choose Streamlit instead of Flask or Django?**
   - *Answer:* Flask/Django are general-purpose web frameworks requiring separate frontend templates (HTML/CSS/JS) and API endpoints. Streamlit allows direct, reactive data binding between Pandas/Plotly and UI widgets in pure Python, making it ideal for data analysis capstone projects.
@@ -158,8 +167,11 @@ Here are standard questions often asked by internal and external academic projec
 - **Q3: Why is net profit recorded as ₹0 for cancelled and returned orders?**
   - *Answer:* From an e-commerce accounting perspective, cancelled orders never settle and returned orders involve inventory write-backs and shipping reversals, resulting in zero realized profit.
 
-- **Q4: What are the main limitations and future scopes of this project?**
-  - *Answer:* Currently, the dataset is static Excel. Future enhancements could include connecting directly to a live PostgreSQL/MySQL database, implementing predictive machine learning models for customer lifetime value (CLV), and forecasting demand using ARIMA/Prophet.
+- **Q4: How does the dashboard prevent crashes when users filter out order statuses?**
+  - *Answer:* In `app.py`, `pd.crosstab()` tables are explicitly reindexed using `.reindex(columns=ALL_STATUSES, fill_value=0.0)`. This guarantees all four lifecycle status columns (`Delivered`, `Shipped`, `Returned`, `Cancelled`) exist even if a user filters down to a single status.
+
+- **Q5: Why is Streamlit Community Cloud preferred over Vercel for this project?**
+  - *Answer:* Streamlit relies on persistent bi-directional WebSocket communication to sync UI state and reactivity. Vercel is built for stateless, short-lived serverless functions that terminate after HTTP responses, leading to broken sessions and disconnections. Streamlit Cloud provides native WebSocket support, persistent sessions, and built-in secrets management.
 
 ---
 

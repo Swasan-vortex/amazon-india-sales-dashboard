@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # Local helper modules
-from data_loader import load_and_preprocess_data, get_filter_options
+from data_loader import load_and_preprocess_data, get_filter_options, resolve_dataset_source
 from utils import (
     format_inr,
     format_number,
@@ -165,17 +165,63 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 3. DATA LOADING
+# 3. DATA LOADING (Deployment-Ready with Secrets, Env & Upload Fallback)
 # -----------------------------------------------------------------------------
-DATA_FILE = "Amazon Sales Data India.xlsx"
+source_type, source_val = resolve_dataset_source()
+raw_df = None
 
-try:
-    raw_df = load_and_preprocess_data(DATA_FILE)
-    filter_opts = get_filter_options(raw_df)
-except Exception as e:
-    st.error(f"⚠️ Error loading dataset: {str(e)}")
-    st.info("Please ensure 'Amazon Sales Data India.xlsx' is present in the project directory.")
-    st.stop()
+if source_val is not None:
+    try:
+        raw_df = load_and_preprocess_data(source_val)
+    except Exception as e:
+        st.error(f"⚠️ Error loading dataset from {source_type} source: {str(e)}")
+
+# If no dataset could be automatically loaded, display a clean, deployment-friendly interface
+if raw_df is None:
+    st.markdown("""
+    <div class="dashboard-header">
+        <h1>📦 Amazon India Sales & Profit Analysis Dashboard</h1>
+        <p>4th-Year B.Tech Academic Project in Python, Data Analytics & Business Intelligence</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.warning(
+        "🔒 **Dataset Not Detected in Deployment Environment**\n\n"
+        "The proprietary company dataset (`Amazon Sales Data India.xlsx`) is excluded from public "
+        "GitHub repositories for compliance and confidentiality."
+    )
+
+    uploaded_file = st.file_uploader(
+        "📁 Upload 'Amazon Sales Data India.xlsx' to launch the dashboard:",
+        type=["xlsx", "xls"],
+        help="Upload the provided Amazon India Sales Excel dataset to run the dashboard."
+    )
+
+    if uploaded_file is not None:
+        try:
+            raw_df = load_and_preprocess_data(uploaded_file)
+            st.success("✅ Dataset loaded successfully!")
+        except Exception as e:
+            st.error(f"❌ Failed to process uploaded file: {str(e)}")
+            st.stop()
+    else:
+        with st.expander("⚙️ Deployment Guide: How to configure remote dataset storage"):
+            st.markdown("""
+            To deploy this project to cloud hosting (such as **Streamlit Community Cloud**) without manual uploads:
+            
+            1. **Upload Dataset Securely:**
+               Store `Amazon Sales Data India.xlsx` in private cloud storage (AWS S3 presigned URL, Google Cloud Storage, or private storage bucket).
+            
+            2. **Configure Streamlit Secrets:**
+               In Streamlit Cloud **Settings > Secrets** (or `.streamlit/secrets.toml` locally), define:
+               ```toml
+               DATASET_URL = "https://your-private-cloud-storage.com/Amazon%20Sales%20Data%20India.xlsx"
+               ```
+            3. The application will securely stream the dataset on startup while keeping your GitHub repository public and compliant.
+            """)
+        st.stop()
+
+filter_opts = get_filter_options(raw_df)
 
 # -----------------------------------------------------------------------------
 # 4. SIDEBAR - CONTROLS & DYNAMIC FILTERS
@@ -691,18 +737,20 @@ with tab_logistics:
         st.plotly_chart(fig_ful, use_container_width=True)
 
     with ful_col2:
-        # Fulfillment Channel Delivery Success vs Cancellation/Return
-        ful_status = pd.crosstab(
+        # Fulfillment Channel Delivery Success vs Cancellation/Return (Robust to filtering)
+        all_order_statuses = ["Delivered", "Shipped", "Returned", "Cancelled"]
+        ful_crosstab = pd.crosstab(
             filtered_df["Fulfillment"],
             filtered_df["Order_Status"],
             normalize="index"
         ) * 100
-        ful_status = ful_status.reset_index()
+        ful_status = ful_crosstab.reindex(columns=all_order_statuses, fill_value=0.0).fillna(0.0).reset_index()
+        ful_status.columns.name = None
 
         fig_ful_status = px.bar(
             ful_status,
             x="Fulfillment",
-            y=["Delivered", "Shipped", "Returned", "Cancelled"],
+            y=all_order_statuses,
             title="Order Status Share by Fulfillment Channel (%)",
             color_discrete_map=STATUS_COLORS,
             barmode="stack"
@@ -813,19 +861,21 @@ with tab_payment:
         )
         st.plotly_chart(fig_aov, use_container_width=True)
 
-    # Payment Status Performance (Return / Cancellation comparison)
+    # Payment Status Performance (Return / Cancellation comparison - Robust to filtering)
     st.markdown("#### 🔄 Return & Cancellation Rate by Payment Mode")
-    pay_status = pd.crosstab(
+    all_order_statuses = ["Delivered", "Shipped", "Returned", "Cancelled"]
+    pay_crosstab = pd.crosstab(
         filtered_df["Payment_Method"],
         filtered_df["Order_Status"],
         normalize="index"
     ) * 100
-    pay_status = pay_status.reset_index()
+    pay_status = pay_crosstab.reindex(columns=all_order_statuses, fill_value=0.0).fillna(0.0).reset_index()
+    pay_status.columns.name = None
 
     fig_pay_stat = px.bar(
         pay_status,
         x="Payment_Method",
-        y=["Delivered", "Shipped", "Returned", "Cancelled"],
+        y=all_order_statuses,
         color_discrete_map=STATUS_COLORS,
         barmode="group",
         labels={"value": "Percentage of Orders (%)", "Payment_Method": "Payment Mode"}
@@ -997,7 +1047,7 @@ with tab_trends:
         dow_df = filtered_df.groupby("Day_Name").agg(
             Orders=("Order_ID", "count"),
             Sales=("Total_Sales_INR", "sum")
-        ).reindex(day_order).reset_index()
+        ).reindex(day_order, fill_value=0).fillna(0).reset_index()
 
         fig_dow = px.bar(
             dow_df,
@@ -1068,15 +1118,15 @@ with tab_data:
     with exp_col3:
         sort_order = st.radio("Order", ["Descending", "Ascending"], horizontal=True)
 
-    # Apply search filter
+    # Apply search filter (Plain-text matching with regex=False, case-insensitive, na=False)
     display_df = filtered_df.copy()
-    if search_query:
-        query_lower = search_query.lower()
+    if search_query and str(search_query).strip():
+        query_plain = str(search_query).strip()
         display_df = display_df[
-            display_df["Order_ID"].str.lower().str.contains(query_lower) |
-            display_df["Product"].str.lower().str.contains(query_lower) |
-            display_df["Category"].str.lower().str.contains(query_lower) |
-            display_df["Ship_State"].str.lower().str.contains(query_lower)
+            display_df["Order_ID"].astype(str).str.contains(query_plain, case=False, regex=False, na=False) |
+            display_df["Product"].astype(str).str.contains(query_plain, case=False, regex=False, na=False) |
+            display_df["Category"].astype(str).str.contains(query_plain, case=False, regex=False, na=False) |
+            display_df["Ship_State"].astype(str).str.contains(query_plain, case=False, regex=False, na=False)
         ]
 
     # Sort
@@ -1156,6 +1206,9 @@ with tab_about:
         
         **Q4: How does caching improve dashboard performance?**
         - *Answer:* Utilizing `@st.cache_data` caches the preprocessed dataset in memory, cutting subsequent filter response times from ~2.5 seconds to under 0.05 seconds.
+        
+        **Q5: Why is Streamlit Community Cloud preferred over Vercel for this project?**
+        - *Answer:* Streamlit relies on persistent bi-directional WebSocket communication to sync UI state and reactivity. Vercel is built for stateless, short-lived serverless functions that terminate after HTTP responses, leading to broken sessions and disconnections. Streamlit Cloud provides native WebSocket support, persistent sessions, and built-in secrets management.
         """)
 
 st.markdown("---")
